@@ -77,3 +77,26 @@ j = search("proxy test", num_results=100, lang="en", proxy=proxy, ssl_verify=Fal
 for i in j:
     print(i)
 ```
+
+## Custom Date Search  
+
+```python
+    from googlesearch import search
+    query = 'gold'
+    query_start_date = '2025-01-01'
+    query_end_date = '2025-12-31'
+    num_results = 3
+    results = search(
+        query,
+        num_results=num_results,
+        start_date=query_start_date,
+        end_date=query_end_date,
+        advanced=True,
+        is_news=True
+    )
+    for result in results:
+        print(f"Title: {result.title}")
+        print(f"URL: {result.url}")
+        print(f"Description: {result.description[:200]}...")  # Print first 200 characters of description
+        print("-" * 40)
+```
