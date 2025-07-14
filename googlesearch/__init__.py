@@ -1,26 +1,45 @@
 """googlesearch is a Python library for searching Google, easily."""
 from time import sleep
 from bs4 import BeautifulSoup
+import pandas as pd 
 from requests import get
 from urllib.parse import unquote # to decode the url
 from .user_agents import get_useragent
 
+def _helper_format_date(query_date):
+    if query_date:
+        date_display_format = "%m/%d/%Y"
+        # read date into datetime object
+        if isinstance(query_date, str):
+            query_date = pd.to_datetime(query_date)
+        query_date = query_date.strftime(date_display_format)
+    return query_date
 
-def _req(term, results, lang, start, proxies, timeout, safe, ssl_verify, region):
-    resp = get(
-        url="https://www.google.com/search",
-        headers={
-            "User-Agent": get_useragent(),
-            "Accept": "*/*"
-        },
-        params={
+def _req(term, results, lang, start, proxies, timeout, safe, ssl_verify, region, start_date=None, end_date=None, 
+         is_news=False):
+    payload_params = {
             "q": term,
             "num": results + 2,  # Prevents multiple requests
             "hl": lang,
             "start": start,
             "safe": safe,
             "gl": region,
+        }
+    if is_news:
+        payload_params["tbm"] = "nws"
+    if start_date is not None:
+        start_date = _helper_format_date(start_date)
+        end_date = _helper_format_date(end_date)
+        if end_date is None:
+            end_date = start_date                
+        payload_params["tbs"] = f"cdr:1,cd_min:{start_date},cd_max:{end_date}"
+    resp = get(
+        url="https://www.google.com/search",
+        headers={
+            "User-Agent": get_useragent(),
+            "Accept": "*/*"
         },
+        params=payload_params,
         proxies=proxies,
         timeout=timeout,
         verify=ssl_verify,
@@ -43,11 +62,12 @@ class SearchResult:
         return f"SearchResult(url={self.url}, title={self.title}, description={self.description})"
 
 
-def search(term, num_results=10, lang="en", proxy=None, advanced=False, sleep_interval=0, timeout=5, safe="active", ssl_verify=None, region=None, start_num=0, unique=False):
+def search(term, num_results=10, lang="en", proxy=None, advanced=False, sleep_interval=0, timeout=5, safe="active", ssl_verify=None, region=None, start_num=0, unique=False, 
+           start_date=None,end_date=None, is_news=False):
     """Search the Google search engine"""
 
     # Proxy setup
-    proxies = {"https": proxy, "http": proxy} if proxy and (proxy.startswith("https") or proxy.startswith("http") or proxy.startswith("socks5")) else None
+    proxies = {"https": proxy, "http": proxy} if proxy and (proxy.startswith("https") or proxy.startswith("http")) else None
 
     start = start_num
     fetched_results = 0  # Keep track of the total fetched results
@@ -56,7 +76,9 @@ def search(term, num_results=10, lang="en", proxy=None, advanced=False, sleep_in
     while fetched_results < num_results:
         # Send request
         resp = _req(term, num_results - start,
-                    lang, start, proxies, timeout, safe, ssl_verify, region)
+                    lang, start, proxies, timeout, safe, ssl_verify, region, 
+                    start_date=start_date, end_date=end_date, 
+                    is_news=is_news)
         
         # put in file - comment for debugging purpose
         # with open('google.html', 'w') as f:
@@ -110,3 +132,4 @@ def search(term, num_results=10, lang="en", proxy=None, advanced=False, sleep_in
 
         start += 10  # Prepare for the next set of results
         sleep(sleep_interval)
+###### ADD SOME SUPPORT
